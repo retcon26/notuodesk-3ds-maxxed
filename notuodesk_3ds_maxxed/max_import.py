@@ -162,28 +162,77 @@ def _new_scene(context, name):
     return scene
 
 
+EXT_API = "https://extensions.blender.org/api/v1/extensions/"
+
+
+def _direct_install_reader():
+    """Fallback: download io_scene_max straight from extensions.blender.org, verify its
+    published SHA-256, and install it into the user repository."""
+    import hashlib
+    import json
+    import tempfile
+    import urllib.request
+    ua = {"User-Agent": "NotuoDesk-3ds-Maxxed"}
+    with urllib.request.urlopen(urllib.request.Request(EXT_API, headers=ua), timeout=30) as r:
+        data = json.loads(r.read().decode("utf-8"))
+    item = next((e for e in data.get("data", []) if e.get("id") == READER_ID), None)
+    if item is None:
+        raise RuntimeError("io_scene_max is not listed on extensions.blender.org")
+    with urllib.request.urlopen(urllib.request.Request(item["archive_url"], headers=ua), timeout=60) as r:
+        payload = r.read()
+    expected = (item.get("archive_hash") or "").split(":")[-1].lower()
+    if expected and hashlib.sha256(payload).hexdigest() != expected:
+        raise RuntimeError("downloaded file failed its checksum")
+    path = os.path.join(tempfile.mkdtemp(prefix="maxxed_reader_"), "io_scene_max.zip")
+    with open(path, "wb") as fh:
+        fh.write(payload)
+    bpy.ops.extensions.package_install_files(filepath=path, repo="user_default",
+                                             enable_on_install=True, overwrite=True)
+
+
 class MAX_OT_install_max_reader(Operator):
     """Install the open-source .max reader (io_scene_max) from extensions.blender.org"""
     bl_idname = "max.install_max_reader"
     bl_label = "Install .max Reader"
 
     def execute(self, context):
+        if not bpy.app.online_access:
+            self.report({"WARNING"}, "Turn on Preferences > System > Network > Allow Online Access, then try again")
+            try:
+                context.preferences.active_section = "SYSTEM"
+                bpy.ops.screen.userpref_show("INVOKE_DEFAULT")
+            except Exception:
+                pass
+            return {"CANCELLED"}
+        if context.window:
+            context.window.cursor_set("WAIT")
+        errors = []
         repos = context.preferences.extensions.repos
-        idx = next((i for i, r in enumerate(repos) if "extensions.blender.org" in (r.remote_url or "")), -1)
-        if idx < 0 or not bpy.app.online_access:
-            # Let Blender ask for online access / show the listing instead of failing silently
-            bpy.ops.wm.url_open(url=READER_URL)
-            self.report({"WARNING"}, "Enable 'Allow Online Access' in Preferences > System, "
-                                     "or install 'Import Autodesk MAX (.max)' from the page that just opened")
-            return {"CANCELLED"}
-        try:
-            bpy.ops.extensions.package_install("INVOKE_DEFAULT", repo_index=idx, pkg_id=READER_ID,
-                                               enable_on_install=True)
-        except Exception as exc:
-            bpy.ops.wm.url_open(url=READER_URL)
-            self.report({"WARNING"}, f"Automatic install failed ({exc}). Opened the extension page instead")
-            return {"CANCELLED"}
-        return {"FINISHED"}
+        idx = next((i for i, r in enumerate(repos)
+                    if r.enabled and "extensions.blender.org" in (r.remote_url or "")), -1)
+        if idx >= 0:
+            try:
+                # The package list (index.json) must be downloaded before installing from it;
+                # called without INVOKE these run to completion (blocking)
+                bpy.ops.extensions.repo_sync(repo_index=idx)
+                bpy.ops.extensions.package_install(repo_index=idx, pkg_id=READER_ID, enable_on_install=True)
+            except Exception as exc:
+                errors.append(str(exc).strip().splitlines()[-1])
+        if not reader_available():
+            try:
+                _direct_install_reader()
+            except Exception as exc:
+                errors.append(str(exc).strip().splitlines()[-1])
+        if context.window:
+            context.window.cursor_set("DEFAULT")
+        if reader_available():
+            self.report({"INFO"}, ".max reader installed: File > Open 3ds Max File is ready")
+            return {"FINISHED"}
+        bpy.ops.wm.url_open(url=READER_URL)
+        self.report({"ERROR"}, "Could not install the .max reader automatically "
+                               f"({'; '.join(errors) or 'unknown error'}). Its page is now open: "
+                               "click 'Get Add-on' there, or drag the downloaded .zip into Blender")
+        return {"CANCELLED"}
 
 
 class _MaxImportBase(ImportHelper):
