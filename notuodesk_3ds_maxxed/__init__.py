@@ -7,6 +7,7 @@
 * Command Panel (Create / Modify / Hierarchy / Motion / Display / Utilities)
 * Click-drag primitive creation, Max-named Modifier List (incl. Melt, Skew, Squeeze,
   Slice, Noise, Push, Spherify, FFD), quad menus, Main Toolbar
+* Open / merge 3ds Max (.max) files and FBX from 3ds Max
 * V-Ray workflow: VRayMtl, VRayLight, VRaySun, VRayPhysicalCamera, VRayPlane, and
   detection of Chaos "V-Ray for Blender" when installed
 """
@@ -14,7 +15,7 @@
 bl_info = {
     "name": "NotuoDesk 3ds Maxxed",
     "author": "NotuoDesk",
-    "version": (1, 2, 2),
+    "version": (1, 3, 0),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Sidebar > Command Panel",
     "description": "Makes Blender look and work like 3ds Max",
@@ -24,7 +25,7 @@ bl_info = {
 import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty
 
-from . import create, keymap, operators, overlay, prims, theme, ui_menus, ui_panel, vray
+from . import create, keymap, max_import, operators, overlay, prims, theme, ui_menus, ui_panel, vray
 
 
 _prefs_cache = [None]
@@ -131,7 +132,7 @@ HOTKEY_CHEATSHEET = (
 
 
 _classes = (
-    (MaxxedPreferences,) + prims.classes + operators.classes + create.classes + vray.classes
+    (MaxxedPreferences,) + prims.classes + operators.classes + create.classes + vray.classes + max_import.classes
     + ui_menus.classes
     + ui_panel.classes + tuple(ui_panel.ROLLOUTS)
 )
@@ -170,6 +171,7 @@ def register():
     ui_panel.register_props()
     vray.register_props()
     ui_menus.register_draw()
+    max_import.register_menus()
     overlay.register()
     p = get_prefs()
     if p is None or p.use_keymap:
@@ -183,6 +185,7 @@ def unregister():
     _prefs_cache[0] = None
     keymap.unregister_keymaps()
     overlay.unregister()
+    max_import.unregister_menus()
     ui_menus.unregister_draw()
     wm = bpy.types.WindowManager
     vray.unregister_props()
