@@ -280,8 +280,9 @@ class MaxMtlSlot(PropertyGroup):
 
 class MaxMtlEditorState(PropertyGroup):
     slots: CollectionProperty(type=MaxMtlSlot)
-    active: IntProperty(default=0, min=0, max=NUM_SLOTS - 1)
-    visible: EnumProperty(name="Sample Slots", items=[("6", "3 x 2", ""), ("15", "5 x 3", ""), ("24", "6 x 4", "")],
+    active: IntProperty(default=0, min=0)
+    visible: EnumProperty(name="Sample Slots", items=[("6", "3 x 2", ""), ("15", "5 x 3", ""), ("24", "6 x 4", ""),
+                                                      ("ALL", "All Slots", "Show every slot, including added ones")],
                           default="6")
 
 
@@ -560,6 +561,15 @@ class MAX_OT_mtl_pick(Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def invoke(self, context, event):
+        if not any(a.type == "VIEW_3D" for a in context.window.screen.areas):
+            # started from the Material Editor window: listen in the window with the viewports
+            target = next((w for w in context.window_manager.windows
+                           if any(a.type == "VIEW_3D" for a in w.screen.areas)), None)
+            if target is None:
+                return {"CANCELLED"}
+            with context.temp_override(window=target, screen=target.screen, area=None, region=None):
+                bpy.ops.max.mtl_pick("INVOKE_DEFAULT")
+            return {"FINISHED"}
         context.window_manager.modal_handler_add(self)
         context.window.cursor_modal_set("EYEDROPPER")
         context.workspace.status_text_set("Pick Material: click an object.  Right-click / Esc: cancel")
@@ -625,6 +635,202 @@ class MAX_OT_mtl_reset_slots(Operator):
         return {"FINISHED"}
 
 
+class MAX_OT_mtl_add_slot(Operator):
+    """Add a sample slot with a new material (no 24-slot limit)"""
+    bl_idname = "max.mtl_add_slot"
+    bl_label = "New Sample Slot"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        ensure_slots(context.scene)
+        st = state(context)
+        slot = st.slots.add()
+        slot.material = new_default_material(len(st.slots) - 1)
+        st.active = len(st.slots) - 1
+        if st.visible != "ALL" and st.active >= int(st.visible):
+            st.visible = "ALL"
+        _show_in_node_editor(context, slot.material)
+        return {"FINISHED"}
+
+
+class MAX_OT_mtl_get_scene(Operator):
+    """Get All Scene Materials: put every material used in the scene into sample slots"""
+    bl_idname = "max.mtl_get_scene"
+    bl_label = "Get All Scene Materials"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        ensure_slots(context.scene)
+        st = state(context)
+        used = []
+        for ob in context.scene.objects:
+            for ms in getattr(ob, "material_slots", []):
+                if ms.material and ms.material not in used:
+                    used.append(ms.material)
+        have = {sl.material for sl in st.slots if sl.material}
+        added = 0
+        for mat in used:
+            if mat in have:
+                continue
+            empty = next((sl for sl in st.slots if sl.material is None), None) or st.slots.add()
+            empty.material = mat
+            added += 1
+        if len(st.slots) > 24 or any(i >= int(st.visible) for i, sl in enumerate(st.slots)
+                                     if sl.material in used and st.visible != "ALL"):
+            st.visible = "ALL"
+        self.report({"INFO"}, f"{added} scene material(s) added to the editor")
+        return {"FINISHED"}
+
+
+def _assign_drop(context, ob, face_index, mat, only_part, region=None, area=None):
+    """3ds Max drop rules. Returns a short description of what changed."""
+    if ob.type not in {"MESH", "CURVE", "FONT", "SURFACE", "META"}:
+        return None
+    if ob.type == "MESH" and ob.mode == "EDIT":
+        me = ob.data
+        idx = next((i for i, m in enumerate(me.materials) if m == mat), None)
+        if idx is None:
+            me.materials.append(mat)
+            idx = len(me.materials) - 1
+        ob.active_material_index = idx
+        import bmesh
+        bm = bmesh.from_edit_mesh(me)
+        sel = [f for f in bm.faces if f.select]
+        if not sel and face_index is not None and face_index < len(bm.faces):
+            bm.faces.ensure_lookup_table()
+            sel = [bm.faces[face_index]]
+        for f in sel:
+            f.material_index = idx
+        bmesh.update_edit_mesh(me)
+        return f"{len(sel)} face(s) of {ob.name}"
+    if only_part and ob.material_slots and face_index is not None and ob.type == "MESH":
+        try:
+            mi = ob.data.polygons[face_index].material_index
+        except IndexError:
+            mi = ob.active_material_index
+        ob.material_slots[mi].material = mat
+        return f"part of {ob.name}"
+    targets = [ob]
+    if ob.select_get():
+        targets = [o for o in context.selected_objects
+                   if o.type in {"MESH", "CURVE", "FONT", "SURFACE", "META"}] or [ob]
+    for t in targets:
+        t.data.materials.clear()          # Max replaces the object's material
+        t.data.materials.append(mat)
+    return ", ".join(t.name for t in targets)
+
+
+class MAX_OT_mtl_drop(Operator):
+    """Drop a material onto an object (runs in the window with the viewports)"""
+    bl_idname = "max.mtl_drop"
+    bl_label = "Drop Material"
+    bl_options = {"REGISTER", "UNDO", "INTERNAL"}
+
+    material: StringProperty()
+
+    def invoke(self, context, event):
+        self.mat = bpy.data.materials.get(self.material)
+        if self.mat is None:
+            return {"CANCELLED"}
+        self.dropped = 0
+        context.window_manager.modal_handler_add(self)
+        for w in context.window_manager.windows:
+            w.cursor_modal_set("PAINT_BRUSH")
+        self._status(context, None)
+        return {"RUNNING_MODAL"}
+
+    def _status(self, context, target):
+        txt = f"Drag {self.mat.name}: click an object to drop it"
+        if target:
+            txt = f"Drop {self.mat.name} on {target}"
+        txt += "   (Ctrl: only that part · Shift: keep dropping · Right-click/Esc: done)"
+        try:
+            context.workspace.status_text_set(txt)
+        except Exception:
+            pass
+
+    def _finish(self, context):
+        for w in context.window_manager.windows:
+            w.cursor_modal_restore()
+        try:
+            context.workspace.status_text_set(None)
+        except Exception:
+            pass
+        for w in context.window_manager.windows:
+            for a in w.screen.areas:
+                a.tag_redraw()
+
+    def _hit(self, context, event):
+        from .create import region_under_mouse
+        area, region = region_under_mouse(context, event.mouse_x, event.mouse_y)
+        if region is None:
+            return None, None, None, None
+        co = (event.mouse_x - region.x, event.mouse_y - region.y)
+        rv3d = region.data
+        origin = view3d_utils.region_2d_to_origin_3d(region, rv3d, co)
+        direction = view3d_utils.region_2d_to_vector_3d(region, rv3d, co)
+        dg = context.evaluated_depsgraph_get()
+        hit, _l, _n, face, ob, _m = context.scene.ray_cast(dg, origin, direction)
+        if not hit or ob is None:
+            return None, None, area, region
+        return ob.original, face, area, region
+
+    def modal(self, context, event):
+        if event.type in {"RIGHTMOUSE", "ESC"} and event.value == "PRESS":
+            self._finish(context)
+            return {"FINISHED"} if self.dropped else {"CANCELLED"}
+        if event.type == "MOUSEMOVE":
+            ob, _f, _a, _r = self._hit(context, event)
+            self._status(context, ob.name if ob else None)
+            return {"RUNNING_MODAL"}
+        if event.type == "LEFTMOUSE" and event.value == "PRESS":
+            ob, face, area, region = self._hit(context, event)
+            if region is None:
+                return {"PASS_THROUGH"}       # e.g. clicking UI: let it through
+            if ob is None:
+                if not event.shift:
+                    self._finish(context)
+                    return {"FINISHED"} if self.dropped else {"CANCELLED"}
+                return {"RUNNING_MODAL"}
+            what = _assign_drop(context, ob, face, self.mat, event.ctrl)
+            if what:
+                self.dropped += 1
+                self.report({"INFO"}, f"{self.mat.name} -> {what}")
+            if not event.shift:
+                self._finish(context)
+                return {"FINISHED"}
+            return {"RUNNING_MODAL"}
+        return {"PASS_THROUGH"}
+
+
+class MAX_OT_mtl_drag(Operator):
+    """Drag this material to an object: click the hand, then click an object in a viewport.
+    Ctrl: only the clicked part · Shift: keep dropping · in Edit Mode: selected faces"""
+    bl_idname = "max.mtl_drag"
+    bl_label = "Drag Material to Object"
+
+    index: IntProperty()
+
+    def invoke(self, context, event):
+        ensure_slots(context.scene)
+        st = state(context)
+        while self.index >= len(st.slots):
+            st.slots.add()
+        st.active = self.index
+        slot = st.slots[self.index]
+        if slot.material is None:
+            slot.material = new_default_material(self.index)
+        # run the drop in the window that has the viewports (modal handlers are per window)
+        wm = context.window_manager
+        target = next((w for w in wm.windows if any(a.type == "VIEW_3D" for a in w.screen.areas)), context.window)
+        with context.temp_override(window=target, screen=target.screen, area=None, region=None):
+            bpy.ops.max.mtl_drop("INVOKE_DEFAULT", material=slot.material.name)
+        return {"FINISHED"}
+
+    def execute(self, context):
+        return {"CANCELLED"}
+
+
 # ---------------------------------------------------------------------------
 # UI
 # ---------------------------------------------------------------------------
@@ -680,6 +886,8 @@ class MAX_MT_mtl_utilities(Menu):
 
     def draw(self, context):
         lay = self.layout
+        lay.operator("max.mtl_get_scene", text="Get All Scene Materials")
+        lay.operator("max.mtl_add_slot", text="Add Sample Slot")
         lay.operator("max.mtl_reset_slots")
         lay.operator("max.relink_textures", text="Relink Missing Bitmaps...")
         lay.operator("outliner.orphans_purge", text="Clean Unused Materials").do_recursive = True
@@ -704,8 +912,14 @@ class MAX_PT_mtl_editor(_MtlPanel, Panel):
             lay.operator("max.mtl_slot", text="Open Material Editor", icon="MATERIAL").index = 0
             return
 
-        count = int(st.visible)
-        cols = {6: 3, 15: 5, 24: 6}[count]
+        if st.visible == "ALL":
+            count, cols = len(st.slots), 3
+        else:
+            count = min(int(st.visible), len(st.slots))
+            cols = {6: 3, 15: 5, 24: 6}[int(st.visible)]
+        if st.active >= count:          # keep the active slot visible
+            count = len(st.slots)
+            cols = 3
         width = context.region.width / max(context.preferences.system.ui_scale, 0.5)
         icon_scale = max(2.0, min(5.0, (width - 60) / cols / 22))
 
@@ -726,6 +940,7 @@ class MAX_PT_mtl_editor(_MtlPanel, Panel):
             btn.scale_y = 0.7
             btn.operator("max.mtl_slot", text=str(i + 1) + ("•" if hot else ""),
                          depress=(i == st.active), emboss=(i == st.active)).index = i
+            btn.operator("max.mtl_drag", text="", icon="VIEW_PAN", emboss=False).index = i
 
         # right-hand toolbar
         tools = split.column(align=True)
@@ -746,6 +961,9 @@ class MAX_PT_mtl_editor(_MtlPanel, Panel):
         if mat is not None:
             row.prop(mat, "pass_index", text="ID")
         row.operator("max.mtl_show_in_viewport", text="", icon="TEXTURE")
+        row = lay.row(align=True)
+        row.operator("max.mtl_add_slot", text="New Slot", icon="ADD")
+        row.operator("max.mtl_drag", text="Drag", icon="VIEW_PAN").index = st.active
 
         # name / type row
         if mat is None:
@@ -941,6 +1159,7 @@ classes = (MaxStdMaterial, MaxMtlSlot, MaxMtlEditorState,
            MAX_OT_mtl_slot, MAX_OT_mtl_get, MAX_OT_mtl_assign, MAX_OT_mtl_reset, MAX_OT_mtl_make_unique,
            MAX_OT_mtl_put_library, MAX_OT_mtl_select_by, MAX_OT_mtl_show_in_viewport, MAX_OT_mtl_set_type,
            MAX_OT_mtl_load_map, MAX_OT_mtl_clear_map, MAX_OT_mtl_pick, MAX_OT_mtl_reset_slots,
+           MAX_OT_mtl_add_slot, MAX_OT_mtl_get_scene, MAX_OT_mtl_drop, MAX_OT_mtl_drag,
            MAX_MT_mtl_material, MAX_MT_mtl_options, MAX_MT_mtl_utilities,
            MAX_PT_mtl_editor, MAX_PT_mtl_shader_basic, MAX_PT_mtl_blinn, MAX_PT_mtl_vray,
            MAX_PT_mtl_extended, MAX_PT_mtl_maps)

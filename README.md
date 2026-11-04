@@ -9,7 +9,7 @@ A Blender add-on (Blender 4.2+, tested on 5.2.3 LTS) that makes Blender look and
 ## Install
 
 1. In Blender, open **Edit › Preferences › Get Extensions**, click the **⌄** menu (top right), then **Install from Disk…**
-2. Pick `notuodesk_3ds_maxxed-1.5.0.zip` (download it from this repo's **Releases** page).
+2. Pick `notuodesk_3ds_maxxed-1.6.0.zip` (download it from this repo's **Releases** page).
 3. On first enable, the add-on applies the 3ds Max theme and adds a **3ds Max** workspace, then switches you to it.
 
 To reset a rearranged layout, choose **Customize › Apply 3ds Max Look**. It rebuilds the "3ds Max" workspace from scratch.
@@ -40,7 +40,14 @@ To go back to normal Blender, choose **Customize › Restore Blender Look**, or 
 
 Press **M**, or choose **Rendering › Material Editor**. It opens as a narrow floating window, like 3ds Max's Compact Material Editor.
 
-- **Sample slots:** 6, 15 or 24 slots, chosen under Options. A dot marks materials that are used in the scene.
+- **Sample slots:** 6, 15 or 24 slots, or **All**, chosen under Options. A dot marks materials that are used in the scene. **+ New Slot** adds more slots, with no 24-slot limit. **Utils › Get All Scene Materials** loads every material used in the scene, adding slots as needed.
+- **Drag and drop:** click a slot's hand icon, or **Drag**, then click an object in any viewport.
+  - **Plain click:** replaces the object's material, as in Max.
+  - **Object is part of a selection:** assigns to every selected object.
+  - **Edit Mode:** assigns to the selected faces.
+  - **Ctrl+click:** replaces only the material on the part you clicked.
+  - **Shift+click:** keeps dropping. Right-click or Esc to stop.
+  - *Blender doesn't let add-on buttons start a true mouse drag, so it works as pick-up-and-click.*
 - **Side toolbar:** preview type (sphere, cube, flat, cloth…), **Select by Material**, and options.
 - **Bottom toolbar:** Get Material, **Assign Material to Selection**, Reset Map/Mtl to Default Settings, Make Material Copy, **Put to Library** (Asset Browser), Material ID Channel, and Show Shaded Material in Viewport.
 - **Pick Material from Object:** an eyedropper. Click any object, or one face of a multi-material object.

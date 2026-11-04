@@ -15,7 +15,7 @@
 bl_info = {
     "name": "NotuoDesk 3ds Maxxed",
     "author": "NotuoDesk",
-    "version": (1, 5, 0),
+    "version": (1, 6, 0),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Sidebar > Command Panel",
     "description": "Makes Blender look and work like 3ds Max",
