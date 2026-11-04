@@ -686,7 +686,7 @@ class MAX_OT_camera_from_view(Operator):
 
 
 EDITORS = {
-    "MATERIAL": ("ShaderNodeTree", None, "Slate Material Editor"),
+    "MATERIAL": ("ShaderNodeTree", None, "Material Editor"),
     "RENDER_SETUP": ("PROPERTIES", "RENDER", "Render Setup"),
     "ENVIRONMENT": ("PROPERTIES", "WORLD", "Environment and Effects"),
     "CURVE_EDITOR": ("FCURVES", None, "Curve Editor"),
@@ -718,25 +718,84 @@ class MAX_OT_open_editor(Operator):
             area, _ = find_view3d(context)
             if area is None:
                 area = max(context.window.screen.areas, key=lambda a: a.width * a.height)
-        old = area.ui_type
-        try:
-            area.ui_type = ui_type
-            if tab:
-                try:
-                    area.spaces.active.context = tab
-                except Exception:
-                    pass
-            region = next((r for r in area.regions if r.type == "WINDOW"), None)
-            with context.temp_override(window=context.window, area=area, region=region):
-                bpy.ops.screen.area_dupli("INVOKE_DEFAULT")
-        except Exception as exc:
-            self.report({"WARNING"}, f"Could not open window: {exc}")
-        finally:
-            area.ui_type = old
+        if self.editor == "MATERIAL":
+            # The new window takes the size of the area it is copied from: use a tall,
+            # narrow area (the Scene Explorer) so it opens like Max's Compact Material Editor
+            areas = context.window.screen.areas[:]
+            full_w = max(a.x + a.width for a in areas)
+            full_h = max(a.y + a.height for a in areas)
+            narrow = [a for a in areas if a.width < full_w * 0.3 and a.height > full_h * 0.45
+                      and a.type not in {"TOPBAR", "STATUSBAR"}]
+            if narrow:
+                area = min(narrow, key=lambda a: (a.type != "OUTLINER", a.width))
+        win = context.window
+        err = _duplicate_as(win, area, self.editor)
+        if err:
+            self.report({"WARNING"}, f"Could not open window: {err}")
+        if self.editor == "MATERIAL":
+            _setup_material_editor_window(win)
         return {"FINISHED"}
 
     def execute(self, context):
         return {"CANCELLED"}
+
+
+MTL_EDITOR_WIDTH = 210      # points: the node sidebar's natural width = Compact editor width
+
+
+def _duplicate_as(win, area, editor):
+    """Open `area` in a new window as the given editor; the area itself is left unchanged."""
+    ui_type, tab, _ = EDITORS[editor]
+    old = area.ui_type
+    try:
+        area.ui_type = ui_type
+        if tab:
+            try:
+                area.spaces.active.context = tab
+            except Exception:
+                pass
+        region = next((r for r in area.regions if r.type == "WINDOW"), None)
+        with bpy.context.temp_override(window=win, screen=win.screen, area=area, region=region):
+            bpy.ops.screen.area_dupli("INVOKE_DEFAULT")
+    except Exception as exc:
+        return str(exc)
+    finally:
+        area.ui_type = old
+    return None
+
+
+def _setup_material_editor_window(source_win):
+    """Turn the new Shader Editor window into the 3ds Max Compact Material Editor."""
+    from . import mtl_editor
+    scene = source_win.scene
+    mtl_editor.ensure_slots(scene)
+    st = scene.max_mtl_editor
+    if st.slots[st.active].material is None:
+        ob = source_win.view_layer.objects.active
+        st.slots[st.active].material = (ob.active_material if ob and ob.active_material
+                                        else mtl_editor.new_default_material(st.active))
+    win = bpy.context.window_manager.windows[-1]
+
+    def later():
+        try:
+            for area in win.screen.areas:
+                if area.type == "NODE_EDITOR":
+                    sp = area.spaces.active
+                    sp.show_region_ui = True
+                    sp.show_region_header = False      # compact: just the editor panel
+                    sp.show_region_toolbar = False
+                    mat = st.slots[st.active].material
+                    if mat and mat.node_tree:
+                        sp.pin = True
+                        sp.node_tree = mat.node_tree
+                    for r in area.regions:
+                        if r.type == "UI":
+                            r.active_panel_category = "Material Editor"
+                    area.tag_redraw()
+        except ReferenceError:
+            pass
+        return None
+    bpy.app.timers.register(later, first_interval=0.15)
 
 
 class MAX_OT_transform_typein(Operator):
@@ -1122,7 +1181,11 @@ def _build_screen(window):
             if not any(a.type == "OUTLINER" and a.x < view.x for a in screen.areas):
                 region = [r for r in view.regions if r.type == "WINDOW"][-1]
                 with context.temp_override(window=window, screen=screen, area=view, region=region):
-                    bpy.ops.screen.area_split(direction="VERTICAL", factor=0.14)
+                    # Scene Explorer as wide as the Compact Material Editor, which opens
+                    # as a copy of it (M) and is then filled edge to edge by the editor panel
+                    width = MTL_EDITOR_WIDTH * bpy.context.preferences.system.ui_scale
+                    factor = min(0.3, max(0.08, width / max(view.width, 1)))
+                    bpy.ops.screen.area_split(direction="VERTICAL", factor=factor)
                 views = sorted([a for a in screen.areas if a.type == "VIEW_3D"], key=lambda a: a.width)
                 if len(views) >= 2:
                     explorer = views[0]

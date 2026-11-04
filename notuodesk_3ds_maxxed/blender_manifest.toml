@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "notuodesk_3ds_maxxed"
-version = "1.3.2"
+version = "1.4.0"
 name = "NotuoDesk 3ds Maxxed"
 tagline = "Makes Blender look and work like 3ds Max"
 maintainer = "NotuoDesk"

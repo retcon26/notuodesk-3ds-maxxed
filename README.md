@@ -9,7 +9,7 @@ A Blender add-on (Blender 4.2+, tested on 5.2.3 LTS) that makes Blender look and
 ## Install
 
 1. In Blender, open **Edit › Preferences › Get Extensions**, click the **⌄** menu (top right), then **Install from Disk…**
-2. Pick `notuodesk_3ds_maxxed-1.3.2.zip` (download it from this repo's **Releases** page).
+2. Pick `notuodesk_3ds_maxxed-1.4.0.zip` (download it from this repo's **Releases** page).
 3. On first enable, the add-on applies the 3ds Max theme and adds a **3ds Max** workspace, then switches you to it.
 
 To go back to normal Blender, choose **Customize › Restore Blender Look**, or turn the add-on off. Turning it off removes every hotkey and menu change. The theme stays as it is until you restore it.
@@ -31,6 +31,28 @@ To go back to normal Blender, choose **Customize › Restore Blender Look**, or 
 | Quad menus | Right-click (display / tools / transform) and Ctrl+right-click (modeling) |
 | Status bar | "1 Object Selected", X/Y/Z type-in, Grid, Auto Key, Set Key |
 | Look | Max dark UI, cyan selection outline, red sub-object selection, blue vertices, random object colors, names like Box001 |
+
+## Compact Material Editor (M)
+
+<img src="docs/material-editor.png" width="207" align="right" alt="Compact Material Editor">
+
+Press **M**, or choose **Rendering › Material Editor**. It opens as a narrow floating window, like 3ds Max's Compact Material Editor.
+
+- **Sample slots:** 6, 15 or 24 slots, chosen under Options. A dot marks materials that are used in the scene.
+- **Side toolbar:** preview type (sphere, cube, flat, cloth…), **Select by Material**, and options.
+- **Bottom toolbar:** Get Material, **Assign Material to Selection**, Reset Map/Mtl to Default Settings, Make Material Copy, **Put to Library** (Asset Browser), Material ID Channel, and Show Shaded Material in Viewport.
+- **Pick Material from Object:** an eyedropper. Click any object, or one face of a multi-material object.
+- **Material type:** Standard, VRayMtl or Physical.
+- **Rollouts:**
+  - **Shader Basic Parameters:** Blinn, Phong, Metal, Anisotropic, Oren-Nayar-Blinn, Translucent and Multi-Layer, plus Wire, 2-Sided and Faceted.
+  - **Blinn Basic Parameters:** Ambient (locked), Diffuse, Specular, Self-Illumination, Opacity, Specular Level, Glossiness and Soften.
+  - **Extended Parameters.**
+  - **Maps:** per-channel on/off and a bitmap button for Diffuse, Specular, Glossiness, Self-Illum, Opacity, Bump (with amount), Reflection, Refraction and Displacement.
+- **New materials** start with 3ds Max's defaults: grey 150, Specular Level 0, Glossiness 10.
+- **Real materials:** every value drives the material's Principled BSDF directly, so it renders the same in EEVEE, Cycles, and V-Ray (after conversion).
+- **Slate view:** the node canvas behind the panel acts as the Slate editor and shows the active slot's material.
+
+<br clear="right">
 
 ## Opening 3ds Max files
 
