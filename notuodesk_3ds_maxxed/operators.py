@@ -1198,24 +1198,14 @@ def _build_screen(window):
     bpy.app.timers.register(split_later, first_interval=0.1)
 
 
-def apply_layout(context, quad=True):
-    wm = context.window_manager
-    window = context.window or (wm.windows[0] if wm.windows else None)
-    if window is None:
-        return
-    ws = bpy.data.workspaces.get(WS_NAME)
-    if ws is not None:
-        window.workspace = ws
-        def activate():
-            views = [a for a in window.screen.areas if a.type == "VIEW_3D"]
-            if views:
-                _configure_viewport(bpy.context, window, max(views, key=lambda a: a.width * a.height), quad)
-            return None
-        bpy.app.timers.register(activate, first_interval=0.1)
-        return
-    base = bpy.data.workspaces.get("Layout") or window.workspace
+def _build_new_workspace(window, quad=True):
+    """Duplicate Blender's Layout workspace and turn it into the 3ds Max layout."""
+    old = bpy.data.workspaces.get(WS_NAME)
+    base = bpy.data.workspaces.get("Layout")
+    if base is None or base == old:
+        base = next((w for w in bpy.data.workspaces if w != old), old)
     before = set(bpy.data.workspaces.keys())
-    with context.temp_override(window=window, workspace=base):
+    with bpy.context.temp_override(window=window, workspace=base):
         bpy.ops.workspace.duplicate()
     new = [w for w in bpy.data.workspaces if w.name not in before]
     if not new:
@@ -1224,11 +1214,46 @@ def apply_layout(context, quad=True):
     window.workspace = new[0]
 
     def wait():
-        if window.workspace.name != WS_NAME:
+        if window.workspace != new[0]:
             return 0.05
         _build_screen(window)
         return None
     bpy.app.timers.register(wait, first_interval=0.05)
+
+
+def apply_layout(context, quad=True):
+    """(Re)build the '3ds Max' workspace from scratch, so Apply always resets the layout."""
+    wm = context.window_manager
+    window = context.window or (wm.windows[0] if wm.windows else None)
+    if window is None:
+        return
+    old = bpy.data.workspaces.get(WS_NAME)
+    if old is None:
+        _build_new_workspace(window, quad)
+        return
+    # A workspace can't be removed while a window shows it: move off it first
+    other = bpy.data.workspaces.get("Layout")
+    if other is None or other == old:
+        other = next((w for w in bpy.data.workspaces if w != old), None)
+    if other is None:                      # only the 3ds Max workspace exists: rename and replace
+        old.name = WS_NAME + " (old)"
+        _build_new_workspace(window, quad)
+        return
+    for w in wm.windows:
+        if w.workspace == old:
+            w.workspace = other
+
+    def replace():
+        if any(w.workspace == old for w in bpy.context.window_manager.windows):
+            return 0.05                     # workspace switch happens on the next refresh
+        try:
+            old.name = WS_NAME + " (old)"
+            bpy.data.batch_remove(ids=[old])
+        except Exception as exc:
+            print(f"[3ds Maxxed] could not remove old layout: {exc}")
+        _build_new_workspace(window, quad)
+        return None
+    bpy.app.timers.register(replace, first_interval=0.05)
 
 
 def restore_layout(context):
@@ -1338,7 +1363,8 @@ class MAX_OT_set_workspace(Operator):
 
 
 class MAX_OT_apply(Operator):
-    """Turn Blender into 3ds Max: theme, navigation and a '3ds Max' workspace with quad viewports"""
+    """Turn Blender into 3ds Max: theme, navigation and a freshly rebuilt '3ds Max' workspace
+    (Scene Explorer, quad viewports, Command Panel). Also resets a rearranged layout"""
     bl_idname = "max.apply"
     bl_label = "Apply 3ds Max Look"
 

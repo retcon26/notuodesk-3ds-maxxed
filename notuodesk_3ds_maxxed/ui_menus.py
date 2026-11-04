@@ -348,8 +348,13 @@ class MAX_MT_customize(Menu):
         lay.operator("screen.userpref_show", text="Preferences...")
         lay.operator("preferences.addon_show", text="Hotkeys (3ds Maxxed)...").module = __package__
         lay.separator()
-        lay.operator("max.apply", text="Apply 3ds Max Look")
+        lay.operator("max.apply", text="Apply 3ds Max Look (reset layout)")
         lay.operator("max.restore", text="Restore Blender Look")
+        lay.separator()
+        from . import updater
+        if updater.status["state"] == "available":
+            lay.operator("max.install_update", text=f"Update to {updater.status['latest']}", icon="IMPORT")
+        lay.operator("max.check_update", text="Check for Updates", icon="FILE_REFRESH")
         lay.separator()
         lay.menu("TOPBAR_MT_window", text="Window")
 

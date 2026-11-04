@@ -601,6 +601,8 @@ def util_maxxed(layout, context):
     col.operator("max.restore", text="Restore Blender Look", icon="LOOP_BACK")
     layout.operator("max.toggle_quad", text="Maximize Viewport Toggle (Alt+W)")
     layout.operator("preferences.addon_show", text="Hotkeys & Settings").module = __package__
+    from . import updater
+    updater.draw_update_box(layout)
 
 
 classes = (MAX_UL_stack, MAX_MT_create_subcat, MAX_PT_command_panel)

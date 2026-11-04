@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "notuodesk_3ds_maxxed"
-version = "1.4.0"
+version = "1.5.0"
 name = "NotuoDesk 3ds Maxxed"
 tagline = "Makes Blender look and work like 3ds Max"
 maintainer = "NotuoDesk"
@@ -14,3 +14,4 @@ tags = ["3D View", "User Interface"]
 
 [permissions]
 files = "Backs up your preferences so they can be restored"
+network = "Checks GitHub for add-on updates"

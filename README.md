@@ -9,8 +9,10 @@ A Blender add-on (Blender 4.2+, tested on 5.2.3 LTS) that makes Blender look and
 ## Install
 
 1. In Blender, open **Edit › Preferences › Get Extensions**, click the **⌄** menu (top right), then **Install from Disk…**
-2. Pick `notuodesk_3ds_maxxed-1.4.0.zip` (download it from this repo's **Releases** page).
+2. Pick `notuodesk_3ds_maxxed-1.5.0.zip` (download it from this repo's **Releases** page).
 3. On first enable, the add-on applies the 3ds Max theme and adds a **3ds Max** workspace, then switches you to it.
+
+To reset a rearranged layout, choose **Customize › Apply 3ds Max Look**. It rebuilds the "3ds Max" workspace from scratch.
 
 To go back to normal Blender, choose **Customize › Restore Blender Look**, or turn the add-on off. Turning it off removes every hotkey and menu change. The theme stays as it is until you restore it.
 
@@ -128,6 +130,16 @@ You can switch each feature on or off (hotkeys, menu bar, toolbar, status bar, l
 - There's no Teapot, ViewCube or Ribbon. Blender's navigation gizmo stands in for the ViewCube.
 - Shift-drag cloning isn't supported. Use Ctrl+V (Clone), or Blender's Shift+D.
 - Entering a sub-object level on a primitive converts it straight to Editable Poly; in Max you would add an Edit Poly modifier instead.
+
+## Updating
+
+From 1.5.0 on, the add-on can update itself from this repo's GitHub Releases. Use **Customize › Check for Updates**, **Utilities › NotuoDesk 3ds Maxxed** in the Command Panel, or the add-on's preferences.
+
+- If a newer release exists, **Update to x.y.z** downloads it and installs it over the current version in one click.
+- It checks on startup by default. You can turn that off in the preferences.
+- Blender's **Preferences › System › Network › Allow Online Access** has to be on.
+- **While the repo is private,** paste a GitHub token into the add-on preferences (**GitHub Token**). Create a *fine-grained* token at GitHub › Settings › Developer settings › Personal access tokens. Limit it to this repository, with **Contents: Read-only** access. The token is stored in Blender's preferences file. If the repo is public, no token is needed.
+- **Publishing an update:** bump `version` in `blender_manifest.toml`, build the zip, and attach it to a new GitHub Release tagged `vX.Y.Z`.
 
 ## Building from source
 

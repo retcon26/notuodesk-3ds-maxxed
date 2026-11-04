@@ -15,7 +15,7 @@
 bl_info = {
     "name": "NotuoDesk 3ds Maxxed",
     "author": "NotuoDesk",
-    "version": (1, 4, 0),
+    "version": (1, 5, 0),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Sidebar > Command Panel",
     "description": "Makes Blender look and work like 3ds Max",
@@ -23,9 +23,9 @@ bl_info = {
 }
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, IntProperty
+from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 
-from . import create, keymap, max_import, operators, overlay, prims, theme, ui_menus, ui_panel, viewport_menus, vray, mtl_editor
+from . import create, keymap, max_import, operators, overlay, prims, theme, ui_menus, ui_panel, updater, viewport_menus, vray, mtl_editor
 
 
 _prefs_cache = [None]
@@ -71,6 +71,12 @@ class MaxxedPreferences(bpy.types.AddonPreferences):
                               description="Draw [+] [Perspective] [Standard] [Default Shading] labels")
     max_menubar: BoolProperty(name="3ds Max Menu Bar", default=True, update=_redraw,
                               description="Replace Blender's top menus and workspace tabs with the 3ds Max menu bar")
+    update_repo: StringProperty(name="GitHub Repository", default="retcon26/notuodesk-3ds-maxxed",
+                                description="owner/name of the GitHub repository to update from")
+    github_token: StringProperty(name="GitHub Token", subtype="PASSWORD", default="",
+                                 description="Needed while the repository is private: a fine-grained token "
+                                             "with read-only access to Contents of this repository")
+    auto_check_updates: BoolProperty(name="Check for Updates on Startup", default=True)
     random_colors: BoolProperty(name="Random Object Colors", default=True,
                                 description="Give new objects a random wireframe/object color like 3ds Max")
     first_run_done: BoolProperty(default=False)
@@ -84,6 +90,8 @@ class MaxxedPreferences(bpy.types.AddonPreferences):
         col = lay.column(heading="Features")
         for p in ("use_keymap", "max_menubar", "show_toolbar", "show_statusbar", "show_labels", "random_colors"):
             col.prop(self, p)
+
+        updater.draw_update_box(lay, self)
 
         box = lay.box()
         box.label(text="Hotkeys (active while '3ds Max Hotkeys' is on)", icon="KEYINGSET")
@@ -133,7 +141,7 @@ HOTKEY_CHEATSHEET = (
 
 _classes = (
     (MaxxedPreferences,) + prims.classes + operators.classes + create.classes + vray.classes + max_import.classes
-    + viewport_menus.classes + mtl_editor.classes
+    + viewport_menus.classes + mtl_editor.classes + updater.classes
     + ui_menus.classes
     + ui_panel.classes + tuple(ui_panel.ROLLOUTS)
 )
@@ -181,6 +189,7 @@ def register():
     if not bpy.app.background:
         bpy.app.timers.register(_first_run, first_interval=0.5)
         bpy.app.timers.register(_unlock_quads_once, first_interval=1.0)
+    updater.register_auto_check()
 
 
 def unregister():
