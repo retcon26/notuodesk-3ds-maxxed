@@ -66,6 +66,8 @@ VIEWPORT = [
     # Editors
     K("max.open_editor", "M", editor="MATERIAL"),
     K("max.open_editor", "EIGHT", editor="ENVIRONMENT"),
+    # Clickable viewport labels ([+] [Perspective] [Standard] [Default Shading])
+    K("max.viewport_label", "LEFTMOUSE", "CLICK"),
     # Quad menus
     K("wm.call_menu", "RIGHTMOUSE", name="MAX_MT_quad"),
     K("wm.call_menu", "RIGHTMOUSE", ctrl=True, name="MAX_MT_quad_modeling"),

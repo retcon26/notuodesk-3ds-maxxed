@@ -438,8 +438,13 @@ def view3d_header_draw(self, context):
         lay.separator_spacer()
         row = lay.row(align=True)
         row.prop(context.scene.tool_settings, "use_keyframe_insert_auto", text="", icon="REC")
-        lay.popover("VIEW3D_PT_shading", text="", icon="SHADING_SOLID")
-        lay.popover("VIEW3D_PT_overlay", text="", icon="OVERLAY")
+        space = context.space_data
+        row = lay.row(align=True)
+        row.prop(space.overlay, "show_overlays", text="", icon="OVERLAY")
+        row.popover(panel="VIEW3D_PT_overlay", text="")
+        row = lay.row(align=True)
+        row.prop(space.shading, "type", text="", expand=True)
+        row.popover(panel="VIEW3D_PT_shading", text="")
         return
     _orig_topbar["v3d"](self, context)
 

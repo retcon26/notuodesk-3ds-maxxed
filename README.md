@@ -9,7 +9,7 @@ A Blender add-on (Blender 4.2+, tested on 5.2.3 LTS) that makes Blender look and
 ## Install
 
 1. In Blender, open **Edit › Preferences › Get Extensions**, click the **⌄** menu (top right), then **Install from Disk…**
-2. Pick `notuodesk_3ds_maxxed-1.3.1.zip` (download it from this repo's **Releases** page).
+2. Pick `notuodesk_3ds_maxxed-1.3.2.zip` (download it from this repo's **Releases** page).
 3. On first enable, the add-on applies the 3ds Max theme and adds a **3ds Max** workspace, then switches you to it.
 
 To go back to normal Blender, choose **Customize › Restore Blender Look**, or turn the add-on off. Turning it off removes every hotkey and menu change. The theme stays as it is until you restore it.
@@ -22,7 +22,7 @@ To go back to normal Blender, choose **Customize › Restore Blender Look**, or 
 | Workspaces dropdown | Top right, replaces the workspace tabs |
 | Main Toolbar | Viewport header: undo/redo, link/unlink, select by name, region select, move/rotate/scale, reference coordinate system, pivot, snaps, mirror, align, editors, render |
 | Scene Explorer | Outliner on the left |
-| 4 viewports: Top, Front, Left, Perspective | Quad view with `[+] [Top] [Standard] [Edged Faces]` labels |
+| 4 viewports: Top, Front, Left, Perspective | Quad view with clickable `[+] [Top] [Standard] [Edged Faces]` labels, like Max:<br>**[+]** maximize, grid, ViewCube, statistics<br>**[Perspective]** Top / Front / Left… and your cameras<br>**[Standard]** High Quality / Standard / Performance, shadows and AO<br>**[Default Shading]** Default Shading, Shaded Materials with Maps, Flat Color, Clay, Wireframe Override, Realistic, ActiveShade, Edged Faces, See-Through |
 | Command Panel: Create, Modify, Hierarchy, Motion, Display, Utilities | Right sidebar with collapsible rollouts |
 | Click-drag creation (base first, then height) | Box, Cone, Sphere, GeoSphere, Cylinder, Tube, Torus, Pyramid, Plane. Right-click stops creating |
 | Parametric primitives | Length/Width/Height/Segs stay editable in **Parameters** until you convert to Editable Poly or enter sub-object mode |

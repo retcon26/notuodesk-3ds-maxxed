@@ -15,7 +15,7 @@
 bl_info = {
     "name": "NotuoDesk 3ds Maxxed",
     "author": "NotuoDesk",
-    "version": (1, 3, 1),
+    "version": (1, 3, 2),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Sidebar > Command Panel",
     "description": "Makes Blender look and work like 3ds Max",
@@ -25,7 +25,7 @@ bl_info = {
 import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty
 
-from . import create, keymap, max_import, operators, overlay, prims, theme, ui_menus, ui_panel, vray
+from . import create, keymap, max_import, operators, overlay, prims, theme, ui_menus, ui_panel, viewport_menus, vray
 
 
 _prefs_cache = [None]
@@ -133,6 +133,7 @@ HOTKEY_CHEATSHEET = (
 
 _classes = (
     (MaxxedPreferences,) + prims.classes + operators.classes + create.classes + vray.classes + max_import.classes
+    + viewport_menus.classes
     + ui_menus.classes
     + ui_panel.classes + tuple(ui_panel.ROLLOUTS)
 )

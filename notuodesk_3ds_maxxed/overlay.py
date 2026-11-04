@@ -12,8 +12,37 @@ AXES = (
     ((0, 1, 0), "Back"), ((1, 0, 0), "Right"), ((-1, 0, 0), "Left"),
 )
 
-SHADING = {"WIREFRAME": "Wireframe", "SOLID": "Default Shading",
-           "MATERIAL": "High Quality", "RENDERED": "ActiveShade"}
+# Clickable label hit boxes, filled while drawing: {region pointer: [(key, x0, y0, x1, y1)]}
+label_rects = {}
+
+
+def shading_label(context, space):
+    sh = space.shading
+    if sh.type == "WIREFRAME":
+        return "Wireframe Override"
+    if sh.type == "MATERIAL":
+        return "Realistic"
+    if sh.type == "RENDERED":
+        return "ActiveShade"
+    if space.overlay.show_wireframes:
+        return "Edged Faces"
+    if sh.light == "FLAT":
+        return "Flat Color"
+    if sh.color_type == "SINGLE":
+        return "Clay"
+    if sh.color_type == "TEXTURE":
+        return "Shaded Materials with Maps"
+    if sh.color_type == "MATERIAL":
+        return "Shaded Materials"
+    return "Default Shading"
+
+
+def quality_label(context, space):
+    if context.scene.render.use_simplify:
+        return "Performance"
+    if space.shading.type in {"MATERIAL", "RENDERED"}:
+        return "High Quality"
+    return "Standard"
 
 
 def view_name(context, rv3d):
@@ -55,18 +84,33 @@ def _draw():
             if r.type in {"HEADER", "TOOL_HEADER"} and r.height > 1 and r.y >= region.y + region.height // 2:
                 top -= r.height
     y = top - 18 * scale
-    shade = SHADING.get(space.shading.type, "")
-    if space.shading.type in {"SOLID", "MATERIAL"} and space.overlay.show_wireframes:
-        shade = "Edged Faces"
-    text = f"[+] [{view_name(context, rv3d)}] [Standard] [{shade}]"
+    segments = (("PLUS", "[+]"), ("VIEW", f"[{view_name(context, rv3d)}]"),
+                ("QUALITY", f"[{quality_label(context, space)}]"),
+                ("SHADING", f"[{shading_label(context, space)}]"))
     font = 0
     blf.size(font, 10.5 * scale)
     blf.enable(font, blf.SHADOW)
     blf.shadow(font, 3, 0, 0, 0, 0.8)
     blf.color(font, 0.80, 0.80, 0.80, 1.0)
-    blf.position(font, x, y, 0)
-    blf.draw(font, text)
+    gap = 6 * scale
+    rects = []
+    _, h = blf.dimensions(font, "[Hg]")
+    for key, text in segments:
+        w, _ = blf.dimensions(font, text)
+        blf.position(font, x, y, 0)
+        blf.draw(font, text)
+        rects.append((key, x, y - 4 * scale, x + w, y + h + 4 * scale))
+        x += w + gap
     blf.disable(font, blf.SHADOW)
+    label_rects[region.as_pointer()] = rects
+
+
+def hit_label(region, mx, my):
+    """Which label (PLUS / VIEW / QUALITY / SHADING) is under the mouse, if any."""
+    for key, x0, y0, x1, y1 in label_rects.get(region.as_pointer(), ()):
+        if x0 - 2 <= mx <= x1 + 2 and y0 <= my <= y1:
+            return key
+    return None
 
 
 _last_count = [-1]
