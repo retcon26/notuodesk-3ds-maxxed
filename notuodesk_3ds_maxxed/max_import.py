@@ -92,6 +92,13 @@ def relink_textures(materials, folders):
             continue
         path = index.get(stem.lower())
         if path is None:
+            # tolerate renamed copies: "name (1).png", different case/separators, small edits
+            import difflib
+            norm = lambda t: re.sub(r"[^a-z0-9]", "", t.lower())
+            by_norm = {norm(k): v for k, v in index.items()}
+            close = difflib.get_close_matches(norm(stem), list(by_norm), n=1, cutoff=0.8)
+            path = by_norm[close[0]] if close else None
+        if path is None:
             missing.append(stem)
             continue
         img = bpy.data.images.load(path, check_existing=True)
@@ -258,6 +265,38 @@ class _MaxImportBase(ImportHelper):
         return {"FINISHED"}
 
 
+class MAX_OT_load_bitmap(Operator, ImportHelper):
+    """Load a bitmap into the active material's Diffuse / Base Color (like a Max Bitmap map)"""
+    bl_idname = "max.load_bitmap"
+    bl_label = "Load Bitmap"
+    bl_options = {"REGISTER", "UNDO"}
+
+    filter_glob: StringProperty(default="*" + ";*".join(IMAGE_EXTS), options={"HIDDEN"})
+    apply_to_object: BoolProperty(name="All materials on this object that use the same bitmap", default=True)
+
+    @classmethod
+    def poll(cls, context):
+        ob = context.active_object
+        return ob is not None and ob.active_material is not None
+
+    def execute(self, context):
+        from bpy_extras.node_shader_utils import PrincipledBSDFWrapper
+        ob = context.active_object
+        mat = ob.active_material
+        mat.use_nodes = True
+        img = bpy.data.images.load(self.filepath, check_existing=True)
+        targets = [mat]
+        stem = mat.get("max_bitmap")
+        if self.apply_to_object and stem:
+            targets = [m for m in bpy.data.materials if m.get("max_bitmap") == stem]
+        for m in targets:
+            m.use_nodes = True
+            PrincipledBSDFWrapper(m, is_readonly=False).base_color_texture.image = img
+            m["max_bitmap"] = m.get("max_bitmap") or os.path.splitext(os.path.basename(self.filepath))[0]
+        self.report({"INFO"}, f"{img.name} -> {', '.join(m.name for m in targets)}")
+        return {"FINISHED"}
+
+
 class MAX_OT_relink_textures(Operator):
     """Find missing 3ds Max bitmaps in a folder (searched recursively, any image format)"""
     bl_idname = "max.relink_textures"
@@ -361,7 +400,7 @@ def menu_file(self, context):
 
 
 classes = (MAX_OT_install_max_reader, MAX_OT_open_max, MAX_OT_merge_max, MAX_OT_import_max_fbx,
-           MAX_OT_relink_textures, MAX_FH_max)
+           MAX_OT_relink_textures, MAX_OT_load_bitmap, MAX_FH_max)
 
 
 def menu_external(self, context):

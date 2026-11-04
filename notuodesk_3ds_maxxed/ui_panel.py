@@ -398,6 +398,14 @@ def material_rollout(layout, context):
         layout.label(text="No material")
         return
     layout.prop(mat, "name", text="")
+    row = layout.row(align=True)
+    bitmap = mat.get("max_bitmap")
+    has_img = mat.use_nodes and any(n.type == "TEX_IMAGE" and n.image for n in mat.node_tree.nodes)
+    if bitmap and not has_img:
+        row.alert = True
+        row.label(text=f"Missing bitmap: {bitmap}", icon="ERROR")
+        row = layout.row(align=True)
+    row.operator("max.load_bitmap", text="Load Bitmap...", icon="IMAGE_DATA")
     if mat.get("max_vray"):
         vray.draw_vraymtl(layout, mat)
     else:
