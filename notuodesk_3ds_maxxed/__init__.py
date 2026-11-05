@@ -15,7 +15,7 @@
 bl_info = {
     "name": "NotuoDesk 3ds Maxxed",
     "author": "NotuoDesk",
-    "version": (1, 7, 0),
+    "version": (1, 8, 0),
     "blender": (4, 2, 0),
     "location": "3D Viewport > Sidebar > Command Panel",
     "description": "Makes Blender look and work like 3ds Max",
@@ -25,7 +25,7 @@ bl_info = {
 import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 
-from . import create, keymap, max_import, operators, overlay, prims, theme, ui_menus, ui_panel, turbosmooth, updater, viewport_menus, vray, mtl_editor
+from . import create, ffd, keymap, max_import, operators, overlay, prims, theme, ui_menus, ui_panel, turbosmooth, updater, viewport_menus, vray, mtl_editor
 
 
 _prefs_cache = [None]
@@ -141,7 +141,7 @@ HOTKEY_CHEATSHEET = (
 
 _classes = (
     (MaxxedPreferences,) + prims.classes + operators.classes + create.classes + vray.classes + max_import.classes
-    + viewport_menus.classes + mtl_editor.classes + updater.classes + turbosmooth.classes
+    + viewport_menus.classes + mtl_editor.classes + updater.classes + turbosmooth.classes + ffd.classes
     + ui_menus.classes
     + ui_panel.classes + tuple(ui_panel.ROLLOUTS)
 )
@@ -181,6 +181,7 @@ def register():
     vray.register_props()
     mtl_editor.register_props()
     turbosmooth.register_props()
+    ffd.register_props()
     ui_menus.register_draw()
     max_import.register_menus()
     overlay.register()
@@ -200,6 +201,7 @@ def unregister():
     max_import.unregister_menus()
     ui_menus.unregister_draw()
     wm = bpy.types.WindowManager
+    ffd.unregister_props()
     turbosmooth.unregister_props()
     mtl_editor.unregister_props()
     vray.unregister_props()

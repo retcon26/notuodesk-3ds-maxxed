@@ -145,7 +145,10 @@ class MAX_PT_command_panel(Panel):
             split = row.split(factor=0.88, align=True)
             split.prop(ob, "name", text="")
             split.prop(ob, "color", text="")
-            layout.menu("MAX_MT_modifier_list", text="Modifier List")
+            row = layout.row(align=True)
+            row.operator_context = "INVOKE_DEFAULT"
+            row.operator("max.modifier_search", text="Modifier List", icon="VIEWZOOM")
+            row.menu("MAX_MT_modifier_list", text="", icon="COLLAPSEMENU")
 
             col = layout.column(align=True)
             col.template_list("MAX_UL_stack", "", ob, "modifiers", ob, "max_stack_index",
@@ -199,9 +202,12 @@ MELT_PRESETS = (("Ice", 2.0), ("Glass", 0.5), ("Jelly", 0.4), ("Plastic", 0.1))
 
 
 def draw_modifier_params(layout, mod):
-    from . import turbosmooth
+    from . import ffd, turbosmooth
     if turbosmooth.is_turbosmooth(mod):
         turbosmooth.draw(layout, mod.id_data, mod)
+        return
+    if ffd.is_ffd(mod):
+        ffd.draw(layout, mod.id_data, mod)
         return
     col = _split_col(layout)
     if mod.type == "NODES":
@@ -236,6 +242,13 @@ def draw_modifier_params(layout, mod):
 
 
 def draw_base_params(layout, ob):
+    from . import ffd
+    if ob.type == "LATTICE" and ob.get(ffd.OWNER_KEY) in bpy.data.objects:
+        owner = bpy.data.objects[ob[ffd.OWNER_KEY]]
+        mod = next((m for m in owner.modifiers if m.type == "LATTICE" and m.object == ob), None)
+        if mod is not None:
+            ffd.draw(layout, owner, mod, editing_cage=True)
+            return
     col = _split_col(layout)
     if ob.type == "MESH":
         col.prop(ob, "dimensions", text="Size")

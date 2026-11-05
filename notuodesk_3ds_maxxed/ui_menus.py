@@ -44,17 +44,66 @@ MODIFIER_LIST = [
 ]
 
 
+def _modifier_items(self, context):
+    items = []
+    for title, entries in MODIFIER_LIST:
+        cat = title.title()
+        for label, spec in entries:
+            items.append((f"{spec}|{label}", label, cat))
+    _modifier_items.cache = items
+    return items
+
+
+class MAX_OT_modifier_search(bpy.types.Operator):
+    """Modifier List: type to find a modifier, Enter to add it (stays open until you pick one)"""
+    bl_idname = "max.modifier_search"
+    bl_label = "Modifier List"
+    bl_property = "kind"
+    bl_options = {"REGISTER", "UNDO"}
+
+    kind: bpy.props.EnumProperty(items=_modifier_items)
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def invoke(self, context, event):
+        context.window_manager.invoke_search_popup(self)
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        return bpy.ops.max.add_modifier(kind=self.kind)
+
+
+def _make_category_menu(index, title, entries):
+    def draw(self, context):
+        for label, spec in entries:
+            self.layout.operator("max.add_modifier", text=label).kind = f"{spec}|{label}"
+    return type(f"MAX_MT_modlist_{index}", (Menu,), {
+        "bl_label": title.title(), "bl_idname": f"MAX_MT_modlist_{index}",
+        "bl_options": {"SEARCH_ON_KEY_PRESS"}, "draw": draw})
+
+
+CATEGORY_MENUS = [_make_category_menu(i, t, e) for i, (t, e) in enumerate(MODIFIER_LIST)]
+
+
 class MAX_MT_modifier_list(Menu):
+    """Compact one-column Modifier List (categories as submenus; type to search)"""
     bl_label = "Modifier List"
     bl_idname = "MAX_MT_modifier_list"
+    bl_options = {"SEARCH_ON_KEY_PRESS"}
 
     def draw(self, context):
-        row = self.layout.row()
-        for title, items in MODIFIER_LIST:
-            col = row.column()
-            col.label(text=title)
-            for label, spec in items:
-                col.operator("max.add_modifier", text=label).kind = f"{spec}|{label}"
+        lay = self.layout
+        lay.operator_context = "INVOKE_DEFAULT"
+        lay.operator("max.modifier_search", text="Search Modifiers...", icon="VIEWZOOM")
+        lay.separator()
+        lay.operator("max.turbosmooth", text="TurboSmooth")
+        lay.operator("max.add_modifier", text="FFD 4x4x4").kind = "LATTICE:4|FFD 4x4x4"
+        lay.operator("max.add_modifier", text="Melt").kind = "GN:MELT|Melt"
+        lay.separator()
+        for i, (title, _entries) in enumerate(MODIFIER_LIST):
+            lay.menu(f"MAX_MT_modlist_{i}", text=title.title())
 
 
 # ---------------------------------------------------------------------------
@@ -539,8 +588,8 @@ def draw_statusbar(self, context):
     row.operator("max.set_key", text="Set Key")
 
 
-classes = (
-    MAX_MT_modifier_list, MAX_MT_quad, MAX_MT_quad_modeling, MAX_MT_sublevels, MAX_MT_convert,
+classes = tuple(CATEGORY_MENUS) + (
+    MAX_OT_modifier_search, MAX_MT_modifier_list, MAX_MT_quad, MAX_MT_quad_modeling, MAX_MT_sublevels, MAX_MT_convert,
     MAX_MT_create, MAX_MT_views, MAX_MT_rendering, MAX_MT_edit, MAX_MT_tools, MAX_MT_group,
     MAX_MT_animation, MAX_MT_graph_editors, MAX_MT_customize, MAX_MT_scripting, MAX_MT_workspaces,
 )

@@ -927,13 +927,21 @@ def _make_ffd(context, ob, n):
     lat_ob = bpy.data.objects.new(f"{ob.name} FFD", lat)
     for coll in ob.users_collection:
         coll.objects.link(lat_ob)
-    corners = [Vector(c) for c in ob.bound_box]
-    lo = Vector([min(c[i] for c in corners) for i in range(3)])
-    hi = Vector([max(c[i] for c in corners) for i in range(3)])
+    # Measure the mesh itself: ob.bound_box can be stale right after the mesh changed
+    if ob.type == "MESH" and ob.data.vertices:
+        xs = [v.co for v in ob.data.vertices]
+        lo = Vector([min(c[i] for c in xs) for i in range(3)])
+        hi = Vector([max(c[i] for c in xs) for i in range(3)])
+    else:
+        corners = [Vector(c) for c in ob.bound_box]
+        lo = Vector([min(c[i] for c in corners) for i in range(3)])
+        hi = Vector([max(c[i] for c in corners) for i in range(3)])
     lat_ob.parent = ob
     lat_ob.location = (lo + hi) / 2
     lat_ob.scale = [max(hi[i] - lo[i], 1e-3) for i in range(3)]
     lat_ob.color = (1.0, 0.55, 0.1, 1.0)   # Max draws FFD lattices orange
+    lat_ob["max_ffd_owner"] = ob.name
+    lat_ob.show_in_front = True
     return lat_ob
 
 

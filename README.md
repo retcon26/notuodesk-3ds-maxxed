@@ -9,7 +9,7 @@ A Blender add-on (Blender 4.2+, tested on 5.2.3 LTS) that makes Blender look and
 ## Install
 
 1. In Blender, open **Edit › Preferences › Get Extensions**, click the **⌄** menu (top right), then **Install from Disk…**
-2. Pick `notuodesk_3ds_maxxed-1.7.0.zip` (download it from this repo's **Releases** page).
+2. Pick `notuodesk_3ds_maxxed-1.8.0.zip` (download it from this repo's **Releases** page).
 3. On first enable, the add-on applies the 3ds Max theme and adds a **3ds Max** workspace, then switches you to it.
 
 To reset a rearranged layout, choose **Customize › Apply 3ds Max Look**. It rebuilds the "3ds Max" workspace from scratch.
@@ -96,7 +96,15 @@ Underneath it's Blender's native Subdivision Surface, so it keeps GPU subdivisio
 **Built for this add-on** (Geometry Nodes, because Blender has no equivalent):
 **Melt** (Amount, % of Melt Spread, Solidity with Ice/Glass/Jelly/Plastic presets, Irregularity, Drip Size, Seed, Flip Axis). Click **Animate Melt** to keyframe it from solid to puddle over a frame range, or key Amount yourself with Auto Key (N), the key button, or right-click › Insert Keyframe, **Skew**, **Squeeze**, **Slice**, **Noise**, **Push**, **Spherify**.
 
-**FFD 2x2x2 / 3x3x3 / 4x4x4 / FFD Box** each create an orange lattice cage fitted to the object.
+**FFD 2x2x2 / 3x3x3 / 4x4x4 / FFD Box** create an orange cage fitted to the object, with 3ds Max's FFD parameters:
+- **Sub-Object:** **Control Points** (edit the cage), **Lattice** (move, rotate or scale it), **Back to Object**.
+- **Set Number of Points:** L × W × H.
+- **Display:** Lattice, In Front.
+- **Deform:** **Only In Volume** / **All Vertices** with **Falloff**, plus Interpolation (B-Spline, Catmull-Rom, Cardinal, Linear) and Strength.
+- **Control Points:** **Reset**, **Animate All** (keys every point), **Conform to Shape** (Inside / Outside Points, Offset).
+- **Fit to Object** and **Update Volume.** Run Update Volume after moving the cage when using Only In Volume or Falloff.
+
+**Modifier List:** type to search and press Enter. The list stays open until you choose. The ≡ button opens a compact menu of categories.
 
 **Mapped to Blender's own modifiers:** Edit Poly, Symmetry, Mirror, Vertex Weld, ProOptimizer, Optimize, MultiRes, Turn to Mesh, Delete Mesh, Smooth, Edit Normals, Weighted Normals, Retopology, Quadify Mesh, TurboSmooth, MeshSmooth, OpenSubdiv, Tessellate, Subdivide, HSDS, Shell, Chamfer, Array, Boolean, ProBoolean, Lattice, Skin, Displace, Bend, Twist, Taper, Stretch, Relax, Smooth Deform, Wave, Ripple, Affect Region, Shrink Wrap, Conform, Path Deform, Skin Wrap, Skin Morph, Skin (bones), Linked XForm, UVW Map, Unwrap UVW, UVW XForm, Extrude, Lathe, Sweep, Cloth, Flex, Point Cache, Particle Flow, Hair and Fur, and Ocean.
 
