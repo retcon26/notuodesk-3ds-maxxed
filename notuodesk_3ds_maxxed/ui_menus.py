@@ -13,7 +13,7 @@ MODIFIER_LIST = [
         ("Retopology", "REMESH"), ("Quadify Mesh", "REMESH:QUAD"),
     ]),
     ("SUBDIVISION", [
-        ("TurboSmooth", "SUBSURF"), ("MeshSmooth", "SUBSURF"), ("OpenSubdiv", "SUBSURF"),
+        ("TurboSmooth", "TURBOSMOOTH"), ("MeshSmooth", "SUBSURF"), ("OpenSubdiv", "SUBSURF"),
         ("Tessellate", "SUBSURF:SIMPLE"), ("Subdivide", "SUBSURF:SIMPLE"), ("HSDS", "MULTIRES"),
     ]),
     ("GEOMETRY", [
@@ -106,6 +106,7 @@ class MAX_MT_quad(Menu):
         else:
             _header(right, "tools 1")
             right.menu("MAX_MT_sublevels", text="Sub-objects")
+            right.operator("max.turbosmooth", text="TurboSmooth")
             right.operator("max.object_cmd", text="Reset XForm").cmd = "RESET_XFORM"
             right.operator("max.object_cmd", text="Center Pivot").cmd = "CENTER_PIVOT"
             right.operator("max.object_cmd", text="Attach").cmd = "ATTACH"
@@ -159,6 +160,7 @@ class MAX_MT_quad_modeling(Menu):
                        "SWIFT_LOOP", "OPEN_EDGES", "GROW", "SHRINK", "LOOP", "RING"):
                 right.operator("max.edit_poly", text=op.replace("_", " ").title()).op = op
         else:
+            right.operator("max.turbosmooth", text="TurboSmooth")
             right.menu("MAX_MT_convert", text="Convert To:")
             right.menu("MAX_MT_modifier_list", text="Add Modifier")
 

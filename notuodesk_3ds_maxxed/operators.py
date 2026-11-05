@@ -847,6 +847,15 @@ class MAX_OT_add_modifier(Operator):
         spec, label = self.kind.split("|")
         mtype, _, option = spec.partition(":")
         ob = context.active_object
+        if mtype == "TURBOSMOOTH":
+            if ob.type != "MESH":
+                self.report({"WARNING"}, "TurboSmooth works on mesh objects")
+                return {"CANCELLED"}
+            for other in context.selected_objects:
+                if other != ob:
+                    other.select_set(False)
+            bpy.ops.max.turbosmooth()
+            return {"FINISHED"}
         if mtype == "EDIT_POLY":
             bpy.ops.max.subobject(level=1)
             return {"FINISHED"}

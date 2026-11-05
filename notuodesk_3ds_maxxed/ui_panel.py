@@ -199,6 +199,10 @@ MELT_PRESETS = (("Ice", 2.0), ("Glass", 0.5), ("Jelly", 0.4), ("Plastic", 0.1))
 
 
 def draw_modifier_params(layout, mod):
+    from . import turbosmooth
+    if turbosmooth.is_turbosmooth(mod):
+        turbosmooth.draw(layout, mod.id_data, mod)
+        return
     col = _split_col(layout)
     if mod.type == "NODES":
         from . import gn_mods

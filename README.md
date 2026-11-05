@@ -9,7 +9,7 @@ A Blender add-on (Blender 4.2+, tested on 5.2.3 LTS) that makes Blender look and
 ## Install
 
 1. In Blender, open **Edit › Preferences › Get Extensions**, click the **⌄** menu (top right), then **Install from Disk…**
-2. Pick `notuodesk_3ds_maxxed-1.6.1.zip` (download it from this repo's **Releases** page).
+2. Pick `notuodesk_3ds_maxxed-1.7.0.zip` (download it from this repo's **Releases** page).
 3. On first enable, the add-on applies the 3ds Max theme and adds a **3ds Max** workspace, then switches you to it.
 
 To reset a rearranged layout, choose **Customize › Apply 3ds Max Look**. It rebuilds the "3ds Max" workspace from scratch.
@@ -80,6 +80,18 @@ Press **M**, or choose **Rendering › Material Editor**. It opens as a narrow f
 **For full scenes, use FBX:** run [`tools/max_to_blender.ms`](tools/max_to_blender.ms) inside 3ds Max (*Scripting › Run Script*). It exports the open scene, or a whole folder of `.max` files, to FBX. Then use **File › Import › FBX from 3ds Max** in Blender, which keeps animation, skinning, cameras and lights, and turns TurboSmooth into subdivision. *(I haven't been able to test the MAXScript, since 3ds Max isn't available here.)*
 
 ## Modifiers
+
+### TurboSmooth
+
+![TurboSmooth on the Captain](docs/turbosmooth.png)
+
+TurboSmooth is in the Modifier List, the quad menus (right-click and Ctrl+right-click) and the Command Panel. It uses 3ds Max's parameters:
+- **Main:** Iterations (default 1), Render Iters, Isoline Display, Explicit Normals.
+- **Surface Parameters:** Smooth Result, and Separate by **Materials** / **Smoothing Groups**. These keep material borders and sharp edges crisp by creasing them.
+- **Update Options:** Always / When Rendering. When Rendering keeps the viewport light.
+
+Underneath it's Blender's native Subdivision Surface, so it keeps GPU subdivision in the viewport.
+
 
 **Built for this add-on** (Geometry Nodes, because Blender has no equivalent):
 **Melt** (Amount, % of Melt Spread, Solidity with Ice/Glass/Jelly/Plastic presets, Irregularity, Drip Size, Seed, Flip Axis). Click **Animate Melt** to keyframe it from solid to puddle over a frame range, or key Amount yourself with Auto Key (N), the key button, or right-click › Insert Keyframe, **Skew**, **Squeeze**, **Slice**, **Noise**, **Push**, **Spherify**.
